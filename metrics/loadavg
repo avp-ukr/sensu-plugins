@@ -1,0 +1,27 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from socket import gethostname
+from time import time
+from argparse import ArgumentParser
+
+
+def main(prefix):
+    timestamp = int(time())
+    tpl = '{prefix}.load_avg.{key} {value} {timestamp}'
+
+    with open('/proc/loadavg') as f:
+        loadavg = dict(zip(['one', 'five', 'fifteen'], f.readline().split()[:3]))
+
+    for key, value in loadavg.iteritems():
+        print(tpl.format(prefix=prefix,
+                         key=key,
+                         value=value,
+                         timestamp=timestamp))
+
+
+if __name__ == '__main__':
+    parser = ArgumentParser()
+    parser.add_argument('--scheme', default=gethostname(), help='Metric naming scheme')
+    args = parser.parse_args()
+    main(prefix=args.scheme)
