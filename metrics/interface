@@ -24,12 +24,14 @@ def main(prefix=None, exclude=None):
 
             if name and name not in (exclude or []):
                 metrics = dict(zip(metrics_keys, line[1:]))
-                for key, value in metrics.iteritems():
-                    print(tpl.format(prefix=prefix,
-                                     interface=name,
-                                     key=key,
-                                     value=value,
-                                     timestamp=timestamp))
+                interface_is_active = ''.join(metrics.itervalues()) != '0'*len(metrics_keys)
+                if interface_is_active:
+                    for key, value in metrics.iteritems():
+                        print(tpl.format(prefix=prefix,
+                                         interface=name,
+                                         key=key,
+                                         value=value,
+                                         timestamp=timestamp))
 
 
 if __name__ == '__main__':
