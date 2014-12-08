@@ -6,30 +6,35 @@ from time import time
 from argparse import ArgumentParser
 
 
-def main(prefix=None):
+def main(prefix=None, exclude=None):
     timestamp = int(time())
-    tpl = '{prefix}.cpu.total.{key} {value} {timestamp}'
-    metrics_keys = ['user', 'nice', 'system', 'idle', 'iowait', 'irq', 'softirq', 'steal', 'guest', 'guest_nice']
+    tpl = '{prefix}.interface.{interface}.{key} {value} {timestamp}'
 
-    with open('/proc/stat') as f:
+    metrics_keys = ['rxBytes', 'rxPackets', 'rxErrors', 'rxDrops', 'rxFifo', 'rxFrame', 'rxCompressed', 'rxMulticast',
+                    'txBytes', 'txPackets', 'txErrors', 'txDrops', 'txFifo', 'txColls', 'txCarrier', 'txCompressed']
+
+    with open('/proc/net/dev') as f:
         while True:
             try:
                 line = f.next().split()
             except StopIteration:
                 break
 
-            if line[0] == 'cpu':
+            name = line[0][:-1] if line[0].endswith(':') else None
+
+            if name and name not in (exclude or []):
                 metrics = dict(zip(metrics_keys, line[1:]))
                 for key, value in metrics.iteritems():
                     print(tpl.format(prefix=prefix,
+                                     interface=name,
                                      key=key,
                                      value=value,
                                      timestamp=timestamp))
-                break
 
 
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--scheme', default=gethostname(), help='Metric naming scheme (default: %(default)s)')
+    parser.add_argument('--exclude', nargs='+', metavar='interface', help='Exclude interfaces')
     args = parser.parse_args()
-    main(prefix=args.scheme)
+    main(prefix=args.scheme, exclude=args.exclude)

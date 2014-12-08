@@ -6,7 +6,7 @@ from time import time
 from argparse import ArgumentParser
 
 
-def main(prefix):
+def main(prefix=None):
     timestamp = int(time())
     tpl = '{prefix}.load_avg.{key} {value} {timestamp}'
 
@@ -22,6 +22,6 @@ def main(prefix):
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument('--scheme', default=gethostname(), help='Metric naming scheme')
+    parser.add_argument('--scheme', default=gethostname(), help='Metric naming scheme (default: %(default)s)')
     args = parser.parse_args()
     main(prefix=args.scheme)
