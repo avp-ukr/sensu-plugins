@@ -4,32 +4,67 @@
 from socket import gethostname
 from time import time
 from argparse import ArgumentParser
+from pickle import dump, load
 
 
-def main(prefix=None):
-    timestamp = int(time())
-    tpl = '{prefix}.cpu.total.{key} {value} {timestamp}'
-    metrics_keys = ['user', 'nice', 'system', 'idle', 'iowait', 'irq', 'softirq', 'steal', 'guest', 'guest_nice']
+class CPU(object):
+    KEYS = ['user', 'nice', 'system', 'idle', 'iowait', 'irq', 'softirq', 'steal', 'guest', 'guest_nice']
 
-    with open('/proc/stat') as f:
-        while True:
-            try:
-                line = f.next().split()
-            except StopIteration:
-                break
+    def __init__(self, prefix=None, percentage=False, filename=None):
+        self.filename = filename or '/tmp/cpu__metrics.p'
+        self.prefix = prefix
+        self.percentage = percentage
+        self.timestamp = int(time())
 
-            if line[0] == 'cpu':
-                metrics = dict(zip(metrics_keys, line[1:]))
-                for key, value in metrics.iteritems():
-                    print(tpl.format(prefix=prefix,
-                                     key=key,
-                                     value=value,
-                                     timestamp=timestamp))
-                break
+    def null(self):
+        return dict(zip(self.KEYS, [0]*len(self.KEYS)))
+
+    def metrics(self):
+        with open('/proc/stat') as f:
+            while True:
+                try:
+                    line = f.next().split()
+                except StopIteration:
+                    return self.null()
+
+                if line[0] == 'cpu':
+                    return dict(zip(self.KEYS, map(int, line[1:])))
+
+    def _save(self, data):
+        with open(self.filename, 'wb') as f:
+            dump(data, f, 2)
+
+    def percentage_metrics(self):
+        metrics = self.metrics()
+
+        try:
+            with open(self.filename, 'rb') as f:
+                previous_metrics = load(f)
+        except IOError as error:
+            if error.errno == 2:
+                self._save(metrics)
+            return self.null()
+
+        self._save(metrics)
+
+        diff_sum = sum(metrics.values())-sum(previous_metrics.values())
+
+        return {key: ((metrics[key]-previous_metrics[key])*100.0)/diff_sum for key in self.KEYS}
+
+    def __repr__(self):
+        tpl = '{prefix}.cpu.{metric}.{key} {value} {timestamp}'
+        metrics = self.percentage_metrics() if self.percentage else self.metrics()
+
+        return '\n'.join(tpl.format(prefix=self.prefix,
+                                    metric='percentage' if self.percentage else 'total',
+                                    key=key,
+                                    value=value,
+                                    timestamp=self.timestamp) for key, value in metrics.iteritems())
 
 
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--scheme', default=gethostname(), help='Metric naming scheme (default: %(default)s)')
+    parser.add_argument('--percentage', action='store_true', help='CPU percentage')
     args = parser.parse_args()
-    main(prefix=args.scheme)
+    print(CPU(prefix=args.scheme, percentage=args.percentage))
