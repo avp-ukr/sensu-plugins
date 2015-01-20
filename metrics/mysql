@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import shlex
 from time import time
 from socket import gethostname
 from subprocess import Popen, PIPE
@@ -10,28 +11,31 @@ from argparse import ArgumentParser
 def run(cmd):
     env = {'PATH': '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'}
 
-    proc = Popen(cmd.split(), stdout=PIPE, stderr=PIPE, env=env)
+    proc = Popen(shlex.split(cmd), stdout=PIPE, stderr=PIPE, env=env)
 
     return proc.communicate()
 
 
-def main(prefix=None, host=None, user=None, password=None):
+def main(prefix=None, user=None, password=None):
     timestamp = int(time())
     tpl = '{prefix}.mysql.status.{key} {value} {timestamp}'
-    cmd = 'mysql --protocol=SOCKET --batch --execute="SHOW STATUS"'
+    cmd = 'mysql --protocol=socket --user={user} --password={password} --batch --execute="SHOW STATUS"'
 
-    stdout, stderr = run(cmd)
+    stdout, stderr = run(cmd.format(user=user, password=password))
 
     for line in stdout.splitlines()[1:]:
-        key, value = line.split()
-        print(tpl.format(prefix=prefix,
-                         key=key,
-                         value=value,
-                         timestamp=timestamp))
+        if not line.startswith('Ssl'):
+            key, value = line.split()
+            print(tpl.format(prefix=prefix,
+                             key=key,
+                             value=value,
+                             timestamp=timestamp))
 
 
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--scheme', default=gethostname(), help='Metric naming scheme (default: %(default)s)')
+    parser.add_argument('--user', required=True, help='MySQL user')
+    parser.add_argument('--password', required=True, help='MuSQL password')
     args = parser.parse_args()
-    main(prefix=args.scheme)
+    main(prefix=args.scheme, user=args.user, password=args.password)
