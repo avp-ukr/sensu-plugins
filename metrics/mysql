@@ -8,83 +8,91 @@ from subprocess import Popen, PIPE
 from argparse import ArgumentParser
 
 # https://github.com/coredump/hoardd/blob/master/scripts-available/mysql.coffee
-metrics_maps = {
-    'general': {
-        'Bytes_received':           'rxBytes',
-        'Bytes_sent':               'txBytes',
-        'Key_read_requests':        'keyRead_requests',
-        'Key_reads':                'keyReads',
-        'Key_write_requests':       'keyWrite_requests',
-        'Key_writes':               'keyWrites',
-        'Binlog_cache_use':         'binlogCacheUse',
-        'Binlog_cache_disk_use':    'binlogCacheDiskUse',
-        'Max_used_connections':     'maxUsedConnections',
-        'Aborted_clients':          'abortedClients',
-        'Aborted_connects':         'abortedConnects',
-        'Threads_connected':        'threadsConnected',
-        'Open_files':               'openFiles',
-        'Open_tables':              'openTables',
-        'Opened_tables':            'openedTables',
-        'Seconds_Behind_Master':    'slaveLag',
-        'Select_full_join':         'fullJoins',
-        'Select_full_range_join':   'fullRangeJoins',
-        'Select_range':             'selectRange',
-        'Select_range_check':       'selectRange_check',
-        'Select_scan':              'selectScan'
-    },
-    'cache': {
-        'Qcache_queries_in_cache':  'queriesInCache',
-        'Qcache_hits':              'cacheHits',
-        'Qcache_inserts':           'inserts',
-        'Qcache_not_cached':        'notCached',
-        'Qcache_lowmem_prunes':     'lowMemPrunes',
-    },
-    'counters': {
-        'Questions':                    'questions',
-        'Com_select':                   'select',
-        'Com_delete':                   'delete',
-        'Com_insert':                   'insert',
-        'Com_update':                   'update',
-        'Com_replace':                  'replace',
-        'Com_delete_multi':             'deleteMulti',
-        'Com_insert_select':            'insertSelect',
-        'Com_update_multi':             'updateMulti',
-        'Com_replace_select':           'replaceSelect',
-        'Handler_write':                'handlerWrite',
-        'Handler_update':               'handlerUpdate',
-        'Handler_delete':               'handlerDelete',
-        'Handler_read_first':           'handlerRead_first',
-        'Handler_read_key':             'handlerRead_key',
-        'Handler_read_next':            'handlerRead_next',
-        'Handler_read_prev':            'handlerRead_prev',
-        'Handler_read_rnd':             'handlerRead_rnd',
-        'Handler_read_rnd_next':        'handlerRead_rnd_next',
-        'Handler_commit':               'handlerCommit',
-        'Handler_rollback':             'handlerRollback',
-        'Handler_savepoint':            'handlerSavepoint',
-        'Handler_savepoint_rollback':   'handlerSavepointRollback',
-    },
-    'innodb': {
-        'Innodb_buffer_pool_pages_total':   'bufferTotal_pages',
-        'Innodb_buffer_pool_pages_free':    'bufferFree_pages',
-        'Innodb_buffer_pool_pages_dirty':   'bufferDirty_pages',
-        'Innodb_buffer_pool_pages_data':    'bufferUsed_pages',
-        'Innodb_page_size':                 'pageSize',
-        'Innodb_pages_created':             'pagesCreated',
-        'Innodb_pages_read':                'pagesRead',
-        'Innodb_pages_written':             'pagesWritten',
-        'Innodb_row_lock_current_waits':    'currentLockWaits',
-        'Innodb_row_lock_waits':            'lockWaitTimes',
-        'Innodb_row_lock_time':             'rowLockTime',
-        'Innodb_data_reads':                'fileReads',
-        'Innodb_data_writes':               'fileWrites',
-        'Innodb_data_fsyncs':               'fileFsyncs',
-        'Innodb_log_writes':                'logWrites',
-        'Innodb_rows_updated':              'rowsUpdated',
-        'Innodb_rows_read':                 'rowsRead',
-        'Innodb_rows_deleted':              'rowsDeleted',
-        'Innodb_rows_inserted':             'rowsInserted',
-    }
+general_group = {
+    'Bytes_received':           'rxBytes',
+    'Bytes_sent':               'txBytes',
+    'Key_read_requests':        'keyRead_requests',
+    'Key_reads':                'keyReads',
+    'Key_write_requests':       'keyWrite_requests',
+    'Key_writes':               'keyWrites',
+    'Binlog_cache_use':         'binlogCacheUse',
+    'Binlog_cache_disk_use':    'binlogCacheDiskUse',
+    'Max_used_connections':     'maxUsedConnections',
+    'Aborted_clients':          'abortedClients',
+    'Aborted_connects':         'abortedConnects',
+    'Threads_connected':        'threadsConnected',
+    'Open_files':               'openFiles',
+    'Open_tables':              'openTables',
+    'Opened_tables':            'openedTables',
+    'Seconds_Behind_Master':    'slaveLag',
+    'Select_full_join':         'fullJoins',
+    'Select_full_range_join':   'fullRangeJoins',
+    'Select_range':             'selectRange',
+    'Select_range_check':       'selectRange_check',
+    'Select_scan':              'selectScan',
+}
+
+cache_group = {
+    'Qcache_queries_in_cache':  'queriesInCache',
+    'Qcache_hits':              'cacheHits',
+    'Qcache_inserts':           'inserts',
+    'Qcache_not_cached':        'notCached',
+    'Qcache_lowmem_prunes':     'lowMemPrunes',
+}
+
+counters_group = {
+    'Questions':                    'questions',
+    'Com_select':                   'select',
+    'Com_delete':                   'delete',
+    'Com_insert':                   'insert',
+    'Com_update':                   'update',
+    'Com_replace':                  'replace',
+    'Com_delete_multi':             'deleteMulti',
+    'Com_insert_select':            'insertSelect',
+    'Com_update_multi':             'updateMulti',
+    'Com_replace_select':           'replaceSelect',
+    'Handler_write':                'handlerWrite',
+    'Handler_update':               'handlerUpdate',
+    'Handler_delete':               'handlerDelete',
+    'Handler_read_first':           'handlerRead_first',
+    'Handler_read_key':             'handlerRead_key',
+    'Handler_read_next':            'handlerRead_next',
+    'Handler_read_prev':            'handlerRead_prev',
+    'Handler_read_rnd':             'handlerRead_rnd',
+    'Handler_read_rnd_next':        'handlerRead_rnd_next',
+    'Handler_commit':               'handlerCommit',
+    'Handler_rollback':             'handlerRollback',
+    'Handler_savepoint':            'handlerSavepoint',
+    'Handler_savepoint_rollback':   'handlerSavepointRollback',
+}
+
+innodb_group = {
+    'Innodb_buffer_pool_pages_total':   'bufferTotal_pages',
+    'Innodb_buffer_pool_pages_free':    'bufferFree_pages',
+    'Innodb_buffer_pool_pages_dirty':   'bufferDirty_pages',
+    'Innodb_buffer_pool_pages_data':    'bufferUsed_pages',
+    'Innodb_page_size':                 'pageSize',
+    'Innodb_pages_created':             'pagesCreated',
+    'Innodb_pages_read':                'pagesRead',
+    'Innodb_pages_written':             'pagesWritten',
+    'Innodb_row_lock_current_waits':    'currentLockWaits',
+    'Innodb_row_lock_waits':            'lockWaitTimes',
+    'Innodb_row_lock_time':             'rowLockTime',
+    'Innodb_data_reads':                'fileReads',
+    'Innodb_data_writes':               'fileWrites',
+    'Innodb_data_fsyncs':               'fileFsyncs',
+    'Innodb_log_writes':                'logWrites',
+    'Innodb_rows_updated':              'rowsUpdated',
+    'Innodb_rows_read':                 'rowsRead',
+    'Innodb_rows_deleted':              'rowsDeleted',
+    'Innodb_rows_inserted':             'rowsInserted',
+}
+
+metric_groups = {
+    'general': general_group,
+    'cache': cache_group,
+    'counters': counters_group,
+    'innodb': innodb_group,
 }
 
 
@@ -96,22 +104,30 @@ def run(cmd):
     return proc.communicate()
 
 
-def main(prefix=None, user=None, password=None):
-    timestamp = int(time())
-    tpl = '{prefix}.mysql.{metric}.{key} {value} {timestamp}'
+def mysql_status(user=None, password=None):
     cmd = 'mysql --protocol=socket --user={user} --password={password} --batch --execute="SHOW GLOBAL STATUS"'
 
     stdout, stderr = run(cmd.format(user=user, password=password))
 
     for line in stdout.splitlines()[1:]:
-        mysql_key, value = line.split()
-        for metric_name, maps in metrics_maps:
-            if mysql_key in maps:
+        key_value = line.split()
+        if len(key_value) == 2:
+            yield key_value
+
+
+def main(prefix=None, **kwargs):
+    timestamp = int(time())
+    tpl = '{prefix}.mysql.{metric}.{key} {value} {timestamp}'
+
+    for mysql_key, value in mysql_status(**kwargs):
+        for metric, group in metric_groups.iteritems():
+            if mysql_key in group:
                 print(tpl.format(prefix=prefix,
-                                 metric_name=metric_name,
-                                 key=maps[mysql_key],
+                                 metric=metric,
+                                 key=group[mysql_key],
                                  value=value,
                                  timestamp=timestamp))
+                break
 
 
 if __name__ == '__main__':
