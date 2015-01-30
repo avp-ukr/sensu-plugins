@@ -57,16 +57,17 @@ def main(scheme=None, fqdn=None, host=None, https=False, status_uri=None, purge_
     tpl = '{prefix}.nginx_sla.{key} {value} {timestamp}'
     http_scheme = 'https' if https else 'http'
     url_tpl = http_scheme+'://{fqdn}/{action}'
+    headers = {'Host': host} if host else None
 
     try:
-        request_status = get(url_tpl.format(fqdn=fqdn, action=status_uri))
-        request_purge = get(url_tpl.format(fqdn=fqdn, action=purge_uri))
+        response_status = get(url_tpl.format(fqdn=fqdn, action=status_uri), headers=headers)
+        response_purge = get(url_tpl.format(fqdn=fqdn, action=purge_uri))
     except ConnectionError as error:
         raise SystemExit(error)
     else:
         timestamp = int(time())
-        if request_status.status_code == codes.ok:
-            for key, value in nginx_sla_parser(request_status.text):
+        if response_status.status_code == codes.ok:
+            for key, value in nginx_sla_parser(response_status.text):
                 print(tpl.format(prefix=scheme,
                                  key=key,
                                  value=value,
