@@ -30,7 +30,7 @@ class Device(object):
             except OSError as error:
                 raise DeviceError(error)
         else:
-            raise DeviceError('Path is not mount point of hard drive')
+            raise DeviceError('Path "{}" is not mount point'.format(path))
 
     @property
     def free(self):
@@ -62,7 +62,7 @@ def main(prefix=None, pattern=r''):
 
             name, mount_point = line.split()[:2]
 
-            if re_path.match(mount_point):
+            if re_path.search(mount_point):
                 try:
                     device = Device(mount_point)
                 except DeviceError:
