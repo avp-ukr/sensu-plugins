@@ -44,6 +44,9 @@ class CPU(object):
             if error.errno == 2:
                 self._save(metrics)
             return self.null()
+        except EOFError:
+            self._save(metrics)
+            return self.null()
 
         self._save(metrics)
 
