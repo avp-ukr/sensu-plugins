@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from socket import gethostname, socket, error, AF_INET, SOCK_STREAM
+from socket import gethostname, socket, AF_INET, SOCK_STREAM
 from time import time
 from argparse import ArgumentParser
 from re import compile
@@ -23,7 +23,7 @@ def fetch(host=None, port=None):
             if not data:
                 break
             received_data += data
-    except error:
+    except:
         pass
 
     s.close()
