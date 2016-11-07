@@ -1,12 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from socket import gethostname
-from time import time
-from argparse import ArgumentParser
-import re
-
-
 # The /proc/diskstats file displays the I/O statistics
 # of block devices. Each line contains the following 14
 # fields:
@@ -25,6 +19,11 @@ import re
 # 13 - time spent doing I/Os (ms)
 # 14 - weighted time spent doing I/Os (ms)
 # For more details refer to Documentation/iostats.txt
+
+import re
+from socket import gethostname
+from time import time
+from argparse import ArgumentParser
 
 
 STATS = re.compile(r'\s(?P<name>sd[a-z]+)'
@@ -49,8 +48,8 @@ class Device(object):
         self.sector_size = sector_size
 
     @property
-    def io_count(self):
-        return (self.reads - self.reads_merged) + (self.writes - self.writes_merged)
+    def io_total(self):
+        return self.reads + self.writes
 
     @property
     def write_bytes(self):
@@ -65,7 +64,13 @@ class Device(object):
         return cls(name=kwargs.get('name'), **{key: int(val) for key, val in kwargs.iteritems() if key != 'name'})
 
     def as_dict(self):
-        return {'io_count': self.io_count, 'write_bytes': self.write_bytes, 'read_bytes': self.read_bytes}
+        return {
+            'io_total': self.io_total,
+            'write_bytes': self.write_bytes,
+            'read_bytes': self.read_bytes,
+            'io_reads': self.reads,
+            'io_writes': self.writes,
+        }
 
 
 def main(prefix=None):
@@ -84,8 +89,10 @@ def main(prefix=None):
             if match:
                 raw_data = match.groupdict()
 
-                with open('/sys/block/{}/queue/hw_sector_size'.format(raw_data.get('name'))) as size:
-                    device = Device.from_string(sector_size=size.read().strip(), **raw_data)
+                with open('/sys/block/{}/queue/hw_sector_size'.format(raw_data.get('name'))) as sector_size:
+                    raw_data['sector_size'] = sector_size.read().strip()
+
+                device = Device.from_string(**raw_data)
 
                 for key, val in device.as_dict().iteritems():
                     print(tpl.format(
