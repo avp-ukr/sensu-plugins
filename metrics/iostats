@@ -1,0 +1,103 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from socket import gethostname
+from time import time
+from argparse import ArgumentParser
+import re
+
+
+# The /proc/diskstats file displays the I/O statistics
+# of block devices. Each line contains the following 14
+# fields:
+#  1 - major number
+#  2 - minor mumber
+#  3 - device name
+#  4 - reads completed successfully
+#  5 - reads merged
+#  6 - sectors read
+#  7 - time spent reading (ms)
+#  8 - writes completed
+#  9 - writes merged
+# 10 - sectors written
+# 11 - time spent writing (ms)
+# 12 - I/Os currently in progress
+# 13 - time spent doing I/Os (ms)
+# 14 - weighted time spent doing I/Os (ms)
+# For more details refer to Documentation/iostats.txt
+
+
+STATS = re.compile(r'\s(?P<name>sd[a-z]+)'
+                   r'\s(?P<reads>[0-9]+)'
+                   r'\s(?P<reads_merged>[0-9]+)'
+                   r'\s(?P<sectors_read>[0-9]+)'
+                   r'\s[0-9]+'
+                   r'\s(?P<writes>[0-9]+)'
+                   r'\s(?P<writes_merged>[0-9]+)'
+                   r'\s(?P<sectors_written>[0-9]+)')
+
+
+class Device(object):
+    def __init__(self, name, reads, reads_merged, writes, writes_merged, sectors_read, sectors_written, sector_size=512):
+        self.name = name
+        self.reads = reads
+        self.reads_merged = reads_merged
+        self.writes = writes
+        self.writes_merged = writes_merged
+        self.sectors_read = sectors_read
+        self.sectors_written = sectors_written
+        self.sector_size = sector_size
+
+    @property
+    def io_count(self):
+        return (self.reads - self.reads_merged) + (self.writes - self.writes_merged)
+
+    @property
+    def write_bytes(self):
+        return self.sectors_written * self.sector_size
+
+    @property
+    def read_bytes(self):
+        return self.sectors_read * self.sector_size
+
+    @classmethod
+    def from_string(cls, **kwargs):
+        return cls(name=kwargs.get('name'), **{key: int(val) for key, val in kwargs.iteritems() if key != 'name'})
+
+    def as_dict(self):
+        return {'io_count': self.io_count, 'write_bytes': self.write_bytes, 'read_bytes': self.read_bytes}
+
+
+def main(prefix=None):
+    timestamp = int(time())
+    tpl = '{prefix}.iostats.{device}.{key} {value} {timestamp}'
+
+    with open('/proc/diskstats') as f:
+        while True:
+            try:
+                line = f.next()
+            except StopIteration:
+                break
+
+            match = STATS.search(line)
+
+            if match:
+                raw_data = match.groupdict()
+
+                with open('/sys/block/{}/queue/hw_sector_size'.format(raw_data.get('name'))) as size:
+                    device = Device.from_string(sector_size=size.read().strip(), **raw_data)
+
+                for key, val in device.as_dict().iteritems():
+                    print(tpl.format(
+                        prefix=prefix,
+                        device=device.name,
+                        key=key,
+                        value=val,
+                        timestamp=timestamp,
+                    ))
+
+if __name__ == '__main__':
+    parser = ArgumentParser()
+    parser.add_argument('--scheme', default=gethostname(), help='Metric naming scheme (default: %(default)s)')
+    args = parser.parse_args()
+    main(prefix=args.scheme)
