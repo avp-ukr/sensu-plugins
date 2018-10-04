@@ -24,7 +24,7 @@ def get_interfaces(exclude=None):
             if name and name not in (exclude or []):
                 with open('/sys/class/net/{}/operstate'.format(name)) as operstate:
                     if operstate.read().strip() in ['up', 'unknown']:
-                        yield name, interface(*line[1:])
+                        yield name.replace('.','#vlan'), interface(*line[1:])
 
 
 def main(prefix=None, exclude=None):
